@@ -1,12 +1,13 @@
 call plug#begin('~/.local/share/nvim/plugged')
 
-<<<<<<< Updated upstream
-" Fuzzy file finder
-=======
->>>>>>> Stashed changes
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-Plug 'octol/vim-cpp-enhanced-highlight'
+
+Plug 'sheerun/vim-polyglot'
+Plug 'dracula/vim', {'as': 'dracula'}
+
+Plug 'preservim/nerdtree'
+
 Plug 'dense-analysis/ale'
 Plug 'neovim/nvim-lspconfig'
 Plug 'williamboman/nvim-lsp-installer'
@@ -21,55 +22,43 @@ Plug 'L3MON4D3/LuaSnip'
 Plug 'easymotion/vim-easymotion'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
+
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-surround'
 
-<<<<<<< Updated upstream
-" Easy Nav
-Plug 'easymotion/vim-easymotion'
-
-" Status
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
+Plug 'NeogitOrg/neogit', {'branch': 'master'}
+Plug 'nvim-lua/plenary.nvim'
+Plug 'sindrets/diffview.nvim'
 
 call plug#end()
+
+syntax enable
+set background=dark
+colorscheme dracula
 
 " FZF
 nmap <C-e> :Files<CR>
 nmap <C-h> :History<CR>
 
 " Jump to word
-nmap <Leader>w <Plug>(easymotion-w)
+nmap <Leader>w <Plug>(easymotion-bd-w)
 " Jump to character
 nmap <Leader>s <Plug>(easymotion-s)
 " Jump to line
 nmap <Leader>j <Plug>(easymotion-j)
 nmap <Leader>k <Plug>(easymotion-k)
 
-=======
-call plug#end()
-
-let g:airline_theme = 'minimalist'
-
-" FZF
-nmap <C-e> :Files<CR>
-nmap <C-h> :History<CR>
-
-" Jump to word
-nmap <Leader>w <Plug>(easymotion-w)
-" Jump to character
-nmap <Leader>s <Plug>(easymotion-s)
-" Jump to line
-nmap <Leader>j <Plug>(easymotion-j)
-nmap <Leader>k <Plug>(easymotion-k)
+nnoremap <Leader>t :NERDTreeFind<CR>
 
 " ALE Configuration
->>>>>>> Stashed changes
-let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2'
+let g:ale_cpp_clang_options = '-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion'
+let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2 -Wextra -Wpedantic -Wconversion -Wsign-conversion'
 let g:ale_linters = {
 \ 'cpp': ['clang', 'g++'],
 \ 'python': ['flake8', 'pylint', 'mypy'],
 \}
+
+let g:ale_verbose = 1
 
 " Setup Language Server Protocol for C++
 lua << EOF
@@ -83,10 +72,10 @@ require('lspconfig').clangd.setup{
         buf_set_keymap('n', 'gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', opts)
         buf_set_keymap('n', 'gi', '<Cmd>lua vim.lsp.buf.implementation()<CR>', opts)
         buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
+        buf_set_keymap('n', 'gs', '<Cmd>ClangdSwitchSourceHeader<CR>', opts)
+        buf_set_keymap('n', 'K', '<Cmd>lua vim.lsp.buf.hover()<CR>', opts)
     end
 }
-<<<<<<< Updated upstream
-=======
 
 require('lspconfig').pyright.setup{
     on_attach = function(client, bufnr)
@@ -100,10 +89,19 @@ require('lspconfig').pyright.setup{
         buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
     end
 }
->>>>>>> Stashed changes
 EOF
 
-" Configure nvim-cmp for autocompletion
+lua << EOF
+require('neogit').setup {
+  integrations = {
+    diffview = true
+  }
+}
+
+require('diffview').setup {}
+EOF
+
+" Configure nvim-cmp for autocompletion "
 lua << EOF
 local cmp = require'cmp'
 cmp.setup({
@@ -158,7 +156,7 @@ vim.cmd([[
 vim.api.nvim_set_keymap('n', '<leader>e', '<cmd>lua vim.diagnostic.open_float()<CR>', { noremap = true, silent = true })
 EOF
 
-" General settings
+" General settings "
 set mouse=a
 set number
 set relativenumber
@@ -174,3 +172,20 @@ set incsearch
 set hlsearch
 set wrap
 set cursorline
+
+" Enable persistent undo "
+set undofile
+
+" Specify a directory to store undo files "
+if has("persistent_undo")
+  let target_path = expand('~/.config/nvim/undodir')
+  if !isdirectory(target_path)
+    call mkdir(target_path, "p", 0700)
+  endif
+  let &undodir = target_path
+endif
+
+" NERDTree settings "
+let g:NERDTreeShowHidden=1
+let g:NERDTreeQuitOnOpen=1
+let g:NERDTreeWinSize=40
