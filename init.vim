@@ -1,12 +1,4 @@
-" Initialize plugin system
 call plug#begin('~/.local/share/nvim/plugged')
-
-" NERDTree for directory tree
-Plug 'preservim/nerdtree'
-
-" Telescope for fuzzy finding
-Plug 'nvim-telescope/telescope.nvim', {'do': ':UpdateRemotePlugins'}
-Plug 'nvim-lua/plenary.nvim'  " Dependency for Telescope
 
 " Fuzzy file finder
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
@@ -29,22 +21,27 @@ Plug 'hrsh7th/cmp-buffer'
 Plug 'hrsh7th/cmp-path'
 Plug 'hrsh7th/cmp-cmdline'
 
-" Snippets
-Plug 'SirVer/ultisnips'
-Plug 'quangnguyen30192/cmp-nvim-ultisnips'
+" Easy Nav
+Plug 'easymotion/vim-easymotion'
 
-" End plugin initialization
+" Status
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+
 call plug#end()
 
-" Keybindings
-" Toggle NERDTree with Ctrl+Shift+e
-nnoremap <C-S-e> :NERDTreeToggle<CR>
+" FZF
+nmap <C-e> :Files<CR>
+nmap <C-h> :History<CR>
 
-" Telescope setup for file finding
-nnoremap <C-e> :Telescope find_files<CR>
-nnoremap <C-o> :Telescope oldfiles<CR>
+" Jump to word
+nmap <Leader>w <Plug>(easymotion-w)
+" Jump to character
+nmap <Leader>s <Plug>(easymotion-s)
+" Jump to line
+nmap <Leader>j <Plug>(easymotion-j)
+nmap <Leader>k <Plug>(easymotion-k)
 
-" ALE setup for C++ linting and syntax checking
 let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2'
 let g:ale_linters = {
 \ 'cpp': ['clang', 'g++'],
@@ -52,10 +49,18 @@ let g:ale_linters = {
 
 " Setup Language Server Protocol for C++
 lua << EOF
-require('lspconfig').clangd.setup{}
-EOF
-lua << EOF
-require('lspconfig').clangd.setup{}
+require('lspconfig').clangd.setup{
+    on_attach = function(client, bufnr)
+        local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
+        local opts = { noremap=true, silent=true }
+
+        -- Existing LSP mappings
+        buf_set_keymap('n', 'gd', '<Cmd>lua vim.lsp.buf.definition()<CR>', opts)
+        buf_set_keymap('n', 'gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', opts)
+        buf_set_keymap('n', 'gi', '<Cmd>lua vim.lsp.buf.implementation()<CR>', opts)
+        buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
+    end
+}
 EOF
 
 lua << EOF
@@ -81,3 +86,17 @@ cmp.setup({
 EOF
 
 set mouse=a
+set number
+set relativenumber
+set clipboard=unnamedplus
+set tabstop=4
+set shiftwidth=4
+set expandtab
+set smartindent
+set autoindent
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
+set wrap
+set cursorline
