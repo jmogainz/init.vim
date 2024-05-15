@@ -188,4 +188,4 @@ endif
 " NERDTree settings "
 let g:NERDTreeShowHidden=1
 let g:NERDTreeQuitOnOpen=1
-let g:NERDTreeWinSize=40
+let g:NERDTreeWinSize=80
