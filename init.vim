@@ -32,8 +32,6 @@ Plug 'vim-airline/vim-airline-themes'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-surround'
 
-Plug 'NeogitOrg/neogit', {'branch': 'master'}
-Plug 'nvim-lua/plenary.nvim'
 Plug 'sindrets/diffview.nvim'
 
 call plug#end()
@@ -106,12 +104,6 @@ require('lspconfig').pyright.setup{
 EOF
 
 lua << EOF
-require('neogit').setup {
-  integrations = {
-    diffview = true
-  }
-}
-
 require('diffview').setup {}
 EOF
 
