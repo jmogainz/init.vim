@@ -3,10 +3,16 @@ call plug#begin('~/.local/share/nvim/plugged')
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 
+Plug 'windwp/nvim-autopairs'
+
 Plug 'sheerun/vim-polyglot'
 Plug 'dracula/vim', {'as': 'dracula'}
 
+Plug 'nvim-tree/nvim-web-devicons'
+
 Plug 'preservim/nerdtree'
+Plug 'ryanoasis/vim-devicons'
+Plug 'Xuyuanp/nerdtree-git-plugin'
 
 Plug 'dense-analysis/ale'
 Plug 'neovim/nvim-lspconfig'
@@ -36,9 +42,17 @@ syntax enable
 set background=dark
 colorscheme dracula
 
+" Customizing the fzf window size and enabling text wrapping
+let g:fzf_layout = { 'window': { 'width': 0.95, 'height': 0.95, 'wrap': v:true } }
+
 " FZF
 nmap <C-e> :Files<CR>
 nmap <C-h> :History<CR>
+
+" Map the command to a shortcut
+nnoremap <leader>rg :Rg<Space>
+
+nmap <Leader>fp :let @+=expand('%')<CR>
 
 " Jump to word
 nmap <Leader>w <Plug>(easymotion-bd-w)
@@ -100,6 +114,8 @@ require('neogit').setup {
 
 require('diffview').setup {}
 EOF
+
+lua require('nvim-autopairs').setup({})
 
 " Configure nvim-cmp for autocompletion "
 lua << EOF
