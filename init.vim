@@ -42,6 +42,7 @@ colorscheme dracula
 
 " Customizing the fzf window size and enabling text wrapping
 let g:fzf_layout = { 'window': { 'width': 0.95, 'height': 0.95, 'wrap': v:true } }
+let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --glob "!.git/*"'
 
 " FZF
 nmap <C-e> :Files<CR>
