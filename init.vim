@@ -48,6 +48,9 @@ let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --glob "!.git/*"'
 nmap <C-e> :Files<CR>
 nmap <C-h> :History<CR>
 
+nnoremap <Leader>eh :split <bar> :History<CR>
+nnoremap <Leader>ev :vsplit <bar> :History<CR>
+
 " Map the command to a shortcut
 nnoremap <leader>rg :Rg<Space>
 
