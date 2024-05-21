@@ -66,6 +66,9 @@ nmap <Leader>k <Plug>(easymotion-k)
 
 nnoremap <Leader>t :NERDTreeFind<CR>
 
+nnoremap <Leader>tn :tabnext<CR>
+nnoremap <Leader>tc :tabclose<CR>
+
 " ALE Configuration
 let g:ale_cpp_clang_options = '-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion'
 let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2 -Wextra -Wpedantic -Wconversion -Wsign-conversion'
