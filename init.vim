@@ -1,5 +1,7 @@
 call plug#begin('~/.local/share/nvim/plugged')
 
+Plug 'github/copilot.vim'
+
 Plug 'farmergreg/vim-lastplace'
 
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
@@ -42,6 +44,11 @@ Plug 'Pocco81/auto-save.nvim'
 
 call plug#end()
 
+" Copilot configuration
+let g:copilot_no_tab_map = v:true
+imap <silent><script><expr> <C-J> copilot#Accept("\<CR>")
+let g:copilot_assume_mapped = v:true
+
 let g:gitgutter_enabled = 1
 
 syntax enable
@@ -83,6 +90,7 @@ nnoremap <Leader>tc :tabclose<CR>
 " ALE Configuration "
 let g:ale_cpp_clang_options = '-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion'
 let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2 -Wextra -Wpedantic -Wconversion -Wsign-conversion'
+let g:ale_cpp_cc_options = '-Wall -Wextra -Wpedantic Wsign-conversion -Wno-c++17-extensions'
 let g:ale_linters = {
 \ 'cpp': ['clang', 'g++'],
 \ 'python': ['flake8', 'pylint', 'mypy'],
@@ -96,7 +104,11 @@ EOF
 
 " Setup Language Server Protocol for C++ "
 lua << EOF
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+capabilities.offsetEncoding = { "utf-16" }
+
 require('lspconfig').clangd.setup{
+    capabilities = capabilities,
     on_attach = function(client, bufnr)
         local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
         local opts = { noremap=true, silent=true }
@@ -108,10 +120,12 @@ require('lspconfig').clangd.setup{
         buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
         buf_set_keymap('n', 'gs', '<Cmd>ClangdSwitchSourceHeader<CR>', opts)
         buf_set_keymap('n', 'K', '<Cmd>lua vim.lsp.buf.hover()<CR>', opts)
+        buf_set_keymap('n', '<Leader>rn', '<Cmd>lua vim.lsp.buf.rename()<CR>', opts)
     end
 }
 
 require('lspconfig').pyright.setup{
+    capabilities = capabilities,
     on_attach = function(client, bufnr)
         local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
         local opts = { noremap=true, silent=true }
@@ -121,6 +135,8 @@ require('lspconfig').pyright.setup{
         buf_set_keymap('n', 'gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', opts)
         buf_set_keymap('n', 'gi', '<Cmd>lua vim.lsp.buf.implementation()<CR>', opts)
         buf_set_keymap('n', 'gr', '<Cmd>lua vim.lsp.buf.references()<CR>', opts)
+        buf_set_keymap('n', 'K', '<Cmd>lua vim.lsp.buf.hover()<CR>', opts)
+        buf_set_keymap('n', '<Leader>rn', '<Cmd>lua vim.lsp.buf.rename()<CR>', opts)
     end
 }
 EOF
@@ -183,7 +199,7 @@ vim.cmd([[
 ]])
 
 -- Keybinding to show diagnostics in floating window
-vim.api.nvim_set_keymap('n', '<leader>e', '<cmd>lua vim.diagnostic.open_float()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<Leader>e', '<cmd>lua vim.diagnostic.open_float()<CR>', { noremap = true, silent = true })
 EOF
 
 " General settings "
@@ -200,6 +216,7 @@ set incsearch
 set hlsearch
 set wrap
 set cursorline
+set timeoutlen=300
 
 " Enable persistent undo "
 set undofile
