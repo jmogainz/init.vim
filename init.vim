@@ -1,5 +1,7 @@
 call plug#begin('~/.local/share/nvim/plugged')
 
+Plug 'farmergreg/vim-lastplace'
+
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
 
@@ -33,43 +35,52 @@ Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-surround'
 
 Plug 'sindrets/diffview.nvim'
+Plug 'airblade/vim-gitgutter'
+Plug 'tpope/vim-fugitive'
+
+Plug 'Pocco81/auto-save.nvim'
 
 call plug#end()
+
+let g:gitgutter_enabled = 1
 
 syntax enable
 set background=dark
 colorscheme dracula
 
-" Customizing the fzf window size and enabling text wrapping
+" Customizing the fzf window size and enabling text wrapping "
 let g:fzf_layout = { 'window': { 'width': 0.95, 'height': 0.95, 'wrap': v:true } }
 let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --glob "!.git/*"'
+command! -bang -nargs=* Rg call fzf#vim#grep(
+      \ 'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \ fzf#vim#with_preview(), <bang>0)
 
-" FZF
+" FZF "
 nmap <C-e> :Files<CR>
 nmap <C-h> :History<CR>
 
 nnoremap <Leader>eh :split <bar> :History<CR>
 nnoremap <Leader>ev :vsplit <bar> :History<CR>
 
-" Map the command to a shortcut
+" Map the command to a shortcut "
 nnoremap <leader>rg :Rg<Space>
 
-nmap <Leader>fp :let @+=expand('%')<CR>
+nmap <Leader>fp :let @+=expand('%:p')<CR>
 
-" Jump to word
+" Jump to word "
 nmap <Leader>w <Plug>(easymotion-bd-w)
-" Jump to character
+" Jump to character "
 nmap <Leader>s <Plug>(easymotion-s)
-" Jump to line
+" Jump to line "
 nmap <Leader>j <Plug>(easymotion-j)
 nmap <Leader>k <Plug>(easymotion-k)
 
-nnoremap <Leader>t :NERDTreeFind<CR>
+nnoremap <C-t> :NERDTreeFind<CR>
 
 nnoremap <Leader>tn :tabnext<CR>
 nnoremap <Leader>tc :tabclose<CR>
 
-" ALE Configuration
+" ALE Configuration "
 let g:ale_cpp_clang_options = '-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion'
 let g:ale_cpp_gcc_options = '-std=c++17 -Wall -O2 -Wextra -Wpedantic -Wconversion -Wsign-conversion'
 let g:ale_linters = {
@@ -79,7 +90,11 @@ let g:ale_linters = {
 
 let g:ale_verbose = 1
 
-" Setup Language Server Protocol for C++
+lua << EOF
+require("auto-save").setup {}
+EOF
+
+" Setup Language Server Protocol for C++ "
 lua << EOF
 require('lspconfig').clangd.setup{
     on_attach = function(client, bufnr)
@@ -181,8 +196,6 @@ set shiftwidth=4
 set expandtab
 set smartindent
 set autoindent
-set ignorecase
-set smartcase
 set incsearch
 set hlsearch
 set wrap
