@@ -43,6 +43,10 @@ Plug 'tpope/vim-fugitive'
 
 Plug 'Pocco81/auto-save.nvim'
 
+Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+Plug 'nvim-treesitter/nvim-treesitter-refactor'
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+
 call plug#end()
 
 " Copilot configuration
@@ -98,6 +102,36 @@ let g:ale_linters = {
 \}
 
 let g:ale_verbose = 1
+
+" nvim-treesitter configuration "
+lua << EOF
+require'nvim-treesitter.configs'.setup {
+  ensure_installed = {
+  	"json",
+	"cpp",
+	"yaml",
+	"make",
+	"bash",
+	"lua",
+	"html",
+	"python",
+	"gitignore",
+	"dockerfile",
+	"markdown"
+  },
+  textobjects = {
+    select = {
+      enable = true,
+      keymaps = {
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["ac"] = "@class.outer",
+        ["ic"] = "@class.inner",
+      },
+    },
+  },
+}
+EOF
 
 lua << EOF
 require("auto-save").setup {}
@@ -420,8 +454,8 @@ cmp.setup({
     },
     mapping = {
       ['<C-space>'] = cmp.mapping.complete(),
-      ['<C-d>'] = cmp.mapping.select_prev_item(),
-      ['<C-f>'] = cmp.mapping.select_next_item(),
+      ['<Tab>'] = cmp.mapping.select_next_item(), -- Select next item
+      ['<S-Tab>'] = cmp.mapping.select_prev_item(), -- Select previous item
       ['<C-y>'] = cmp.mapping.confirm({ select = true }),
     },
     sources = {
@@ -429,8 +463,7 @@ cmp.setup({
       { name = 'nvim_lua' },
       { name = 'luasnip' },
       { name = 'buffer' },
-      { name = 'path' },
-      { name = 'cmdline' } 
+      { name = 'path' }
     }
 })
 EOF
