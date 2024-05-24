@@ -1,6 +1,7 @@
 call plug#begin('~/.local/share/nvim/plugged')
 
 Plug 'github/copilot.vim'
+Plug 'nvim-lua/plenary.nvim'
 
 Plug 'farmergreg/vim-lastplace'
 
@@ -105,6 +106,7 @@ EOF
 " Setup Language Server Protocol for C++ "
 lua << EOF
 local capabilities = vim.lsp.protocol.make_client_capabilities()
+capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 capabilities.offsetEncoding = { "utf-16" }
 
 require('lspconfig').clangd.setup{
@@ -141,6 +143,266 @@ require('lspconfig').pyright.setup{
 }
 EOF
 
+"""""""""""""""""""""""""" CUSTOM ACTION FUNCTIONS """"""""""""""""""""""""""
+lua << EOF
+_G.create_cpp_definition = function()
+    -- Get the current buffer and cursor position
+    local bufnr = vim.api.nvim_get_current_buf()
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local line = vim.api.nvim_buf_get_lines(bufnr, pos[1] - 1, pos[1], false)[1]
+
+    -- Extract the function signature
+    local function_signature = line:match("%s*(.-);")
+    if not function_signature then
+        vim.notify("No valid function signature found on the current line", vim.log.levels.ERROR)
+        return
+    end
+
+    -- Extract the class name if it exists
+    local class_name = nil
+    local prev_line_nr = pos[1] - 2
+    while prev_line_nr >= 0 do
+        local prev_line = vim.api.nvim_buf_get_lines(bufnr, prev_line_nr, prev_line_nr + 1, false)[1]
+        class_name = prev_line:match("class%s+([%w_]+)%s*")
+        if class_name then break end
+        prev_line_nr = prev_line_nr - 1
+    end
+
+    -- Extract the namespace if it exists
+    local namespaces = {}
+    prev_line_nr = pos[1] - 2
+    while prev_line_nr >= 0 do
+        local prev_line = vim.api.nvim_buf_get_lines(bufnr, prev_line_nr, prev_line_nr + 1, false)[1]
+        local namespace = prev_line:match("namespace%s+([%w_]+)%s*{")
+        if namespace then
+            table.insert(namespaces, 1, namespace)
+        end
+        prev_line_nr = prev_line_nr - 1
+    end
+
+    -- Add the class scope to the function definition if a class was found
+    local function_definition
+    if class_name then
+        local return_type, function_name = function_signature:match("^(.-)%s+([%w_~]+)%s*%b()")
+        if not return_type then
+            function_name = function_signature:match("([%w_~]+)%s*%b()")
+            return_type = ""
+        end
+        function_definition = return_type .. (return_type ~= "" and " " or "") .. class_name .. "::" .. function_name .. function_signature:match("%b()") .. "\n{\n    // TODO: implement\n}\n"
+    else
+        function_definition = function_signature .. "\n{\n    // TODO: implement\n}\n"
+    end
+
+    -- Add namespace scopes to the function definition
+    if #namespaces > 0 then
+        local namespace_scope = table.concat(namespaces, "::") .. "::"
+        function_definition = return_type .. " " .. (return_type ~= "" and " " or "") .. namespace_scope .. (class_name and (class_name .. "::") or "") .. function_name .. function_signature:match("%b()") .. "\n{\n    // TODO: implement\n}\n"
+    end
+
+    -- Find the corresponding .cpp file
+    local header_file = vim.api.nvim_buf_get_name(bufnr)
+    local cpp_file = header_file:gsub("%.h$", ".cpp"):gsub("%.hpp$", ".cpp")
+    
+    -- Function to create search paths
+    local function create_search_paths(header_file)
+        local base_name = header_file:match("([^/]+)$")
+        local cpp_base_name = base_name:gsub("%.h$", ".cpp"):gsub("%.hpp$", ".cpp")
+        local dir_name = header_file:match("(.*/)")
+        local search_paths = { dir_name .. cpp_base_name }
+
+        if dir_name:find("include/") then
+            local src_dir = dir_name:gsub("/include/.*", "/src/")
+            local source_dir = dir_name:gsub("/include/.*", "/source/")
+            table.insert(search_paths, src_dir .. cpp_base_name)
+            table.insert(search_paths, source_dir .. cpp_base_name)
+
+            local include_parts = dir_name:match("/include/(.+)/")
+            if include_parts then
+                table.insert(search_paths, src_dir .. include_parts .. "/" .. cpp_base_name)
+                table.insert(search_paths, source_dir .. include_parts .. "/" .. cpp_base_name)
+            end
+        end
+        
+        -- Also check directly in src/ and source/ without subdirectories
+        table.insert(search_paths, "src/" .. cpp_base_name)
+        table.insert(search_paths, "source/" .. cpp_base_name)
+        
+        -- Convert all paths to absolute paths
+        for i, path in ipairs(search_paths) do
+            search_paths[i] = vim.fn.fnamemodify(path, ":p")
+        end
+        
+        return search_paths
+    end
+    
+    local search_paths = create_search_paths(header_file)
+    local found_cpp_file = nil
+    for _, path in ipairs(search_paths) do
+        if vim.fn.filereadable(path) == 1 then
+            found_cpp_file = path
+            break
+        end
+    end
+    
+    if not found_cpp_file then
+        -- Default to the same directory as header if no file is found
+        found_cpp_file = vim.fn.fnamemodify(cpp_file, ":p")
+    end
+    
+    -- Write the function definition to the .cpp file
+    local append_to_cpp = function()
+        local cpp_bufnr = vim.fn.bufnr(found_cpp_file, true)
+        if cpp_bufnr == -1 then
+            vim.notify("Could not open corresponding .cpp file", vim.log.levels.ERROR)
+            return
+        end
+
+        -- Check if the definition already exists
+        local cpp_lines = vim.api.nvim_buf_get_lines(cpp_bufnr, 0, -1, false)
+        for _, cpp_line in ipairs(cpp_lines) do
+            if cpp_line:match(function_signature) then
+                vim.notify("Function definition already exists in the .cpp file", vim.log.levels.WARN)
+                return
+            end
+        end
+
+        -- Append the function definition to the end of the .cpp file if no namespace found
+        vim.api.nvim_buf_set_lines(cpp_bufnr, -1, -1, false, vim.split(function_definition, '\n'))
+
+    end
+
+    -- Switch to the .cpp file buffer and append the function definition
+    vim.cmd("edit " .. found_cpp_file)
+    append_to_cpp()
+end
+
+-- Keymap for creating C++ definition from declaration
+vim.api.nvim_set_keymap('n', 'cd', '<Cmd>lua create_cpp_definition()<CR>', { noremap = true, silent = true })
+EOF
+
+lua << EOF
+_G.create_cpp_declaration = function()
+    -- Get the current buffer and cursor position
+    local bufnr = vim.api.nvim_get_current_buf()
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local line = vim.api.nvim_buf_get_lines(bufnr, pos[1] - 1, pos[1], false)[1]
+
+    -- Extract the function definition
+    local function_definition = line:match("^(.-)%s*{") or line:match("^(.-)%s*$")
+    if not function_definition then
+        vim.notify("No valid function definition found on the current line", vim.log.levels.ERROR)
+        return
+    end
+
+    -- Extract the return type, class name, and function signature
+    local return_type, class_name, function_signature = function_definition:match("^(.-)%s+(.-)::(.-%b())")
+    if not function_signature then
+        return_type, function_signature = function_definition:match("^(.-)%s+(.-%b())")
+    end
+    if not function_signature then
+        vim.notify("No valid function signature found in the definition", vim.log.levels.ERROR)
+        return
+    end
+
+    local function_declaration = return_type .. " " .. function_signature .. ";"
+
+    -- Find the corresponding header file
+    local cpp_file = vim.api.nvim_buf_get_name(bufnr)
+    local Path = require('plenary.path')
+    local scan = require('plenary.scandir')
+
+    local function find_header_file(project_root, header_base_name)
+        local found_files = {}
+        scan.scan_dir(project_root, {
+            depth = 10,
+            search_pattern = header_base_name,
+            on_insert = function(entry)
+                table.insert(found_files, entry)
+            end,
+        })
+        return found_files
+    end
+
+    local function create_search_paths(source_file)
+        local base_name = source_file:match("([^/]+)$")
+        local header_base_name = base_name:gsub("%.cpp$", ".h"):gsub("%.cpp$", ".hpp")
+        local dir_name = source_file:match("(.*/)")
+
+        -- Assume the project root is a few levels up from the source file directory
+        local project_root = Path:new(dir_name):parent():parent().filename
+        local found_files = find_header_file(project_root, header_base_name)
+
+        -- Convert all paths to absolute paths
+        for i, path in ipairs(found_files) do
+            found_files[i] = vim.fn.fnamemodify(path, ":p")
+        end
+
+        return found_files
+    end
+    
+    local search_paths = create_search_paths(cpp_file)
+    local found_header_file = nil
+    for _, path in ipairs(search_paths) do
+        if vim.fn.filereadable(path) == 1 then
+            found_header_file = path
+            break
+        end
+    end
+
+    if not found_header_file then
+        vim.notify("No corresponding header file found", vim.log.levels.ERROR)
+        return
+    end
+
+    -- Insert the function declaration into the header file
+    local insert_declaration = function()
+        local header_bufnr = vim.fn.bufnr(found_header_file, true)
+        if header_bufnr == -1 then
+            vim.notify("Could not open corresponding header file", vim.log.levels.ERROR)
+            return
+        end
+
+        -- Find the class definition and insert the declaration
+        local lines = vim.api.nvim_buf_get_lines(header_bufnr, 0, -1, false)
+        local insert_line = nil
+        if class_name then
+            for i, l in ipairs(lines) do
+                if l:match("class%s+" .. class_name) then
+                    insert_line = i
+                    break
+                end
+            end
+        end
+        
+        if not insert_line then
+            -- If no class is found, insert at the end of the file
+            insert_line = #lines
+        else
+            -- Find the next line after the class definition
+            for i = insert_line, #lines do
+                if lines[i]:match("};") then
+                    insert_line = i
+                    break
+                end
+            end
+        end
+        
+        -- Insert the function declaration
+        vim.api.nvim_buf_set_lines(header_bufnr, insert_line, insert_line, false, { function_declaration })
+    end
+
+    -- Switch to the header file buffer and insert the declaration
+    vim.cmd("edit " .. found_header_file)
+    insert_declaration()
+end
+
+-- Keymap for creating C++ declaration from definition
+vim.api.nvim_set_keymap('n', 'cD', '<Cmd>lua create_cpp_declaration()<CR>', { noremap = true, silent = true })
+EOF
+
+
+""""""""""""""""""""" END OF CUSTOM ACTION FUNCTIONS """""""""""""""""""""""
+
 lua << EOF
 require('diffview').setup {}
 EOF
@@ -168,6 +430,7 @@ cmp.setup({
       { name = 'luasnip' },
       { name = 'buffer' },
       { name = 'path' },
+      { name = 'cmdline' } 
     }
 })
 EOF
