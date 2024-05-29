@@ -85,11 +85,6 @@ nmap <Leader>p :let @+=expand('%:p:h')<CR>
 
 " Jump to word "
 nmap <Leader>w <Plug>(easymotion-bd-w)
-" Jump to character "
-nmap <Leader>s <Plug>(easymotion-s)
-" Jump to line "
-nmap <Leader>j <Plug>(easymotion-j)
-nmap <Leader>k <Plug>(easymotion-k)
 
 nnoremap <C-l> :NERDTreeFind<CR>
 
