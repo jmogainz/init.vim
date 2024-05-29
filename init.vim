@@ -47,11 +47,14 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'nvim-treesitter/nvim-treesitter-refactor'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 
+Plug 'tpope/vim-abolish'
+
 call plug#end()
 
 " Copilot configuration
+let g:copilot_enabled = 1
 let g:copilot_no_tab_map = v:true
-imap <silent><script><expr> <C-J> copilot#Accept("\<CR>")
+imap <silent><script><expr> <C-l> copilot#Accept("\<CR>")
 let g:copilot_assume_mapped = v:true
 
 let g:gitgutter_enabled = 1
@@ -64,7 +67,7 @@ colorscheme dracula
 let g:fzf_layout = { 'window': { 'width': 0.95, 'height': 0.95, 'wrap': v:true } }
 let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --glob "!.git/*"'
 command! -bang -nargs=* Rg call fzf#vim#grep(
-      \ 'rg --column --line-number --no-heading --color=always '.shellescape(<q-args>), 1,
+      \ 'rg --column --line-number --no-heading --color=always ' . <q-args>, 1,
       \ fzf#vim#with_preview(), <bang>0)
 
 " FZF "
@@ -78,6 +81,7 @@ nnoremap <Leader>ev :vsplit <bar> :History<CR>
 nnoremap <leader>rg :Rg<Space>
 
 nmap <Leader>fp :let @+=expand('%:p')<CR>
+nmap <Leader>p :let @+=expand('%:p:h')<CR>
 
 " Jump to word "
 nmap <Leader>w <Plug>(easymotion-bd-w)
@@ -87,7 +91,7 @@ nmap <Leader>s <Plug>(easymotion-s)
 nmap <Leader>j <Plug>(easymotion-j)
 nmap <Leader>k <Plug>(easymotion-k)
 
-nnoremap <C-t> :NERDTreeFind<CR>
+nnoremap <C-l> :NERDTreeFind<CR>
 
 nnoremap <Leader>tn :tabnext<CR>
 nnoremap <Leader>tc :tabclose<CR>
@@ -434,6 +438,18 @@ end
 vim.api.nvim_set_keymap('n', 'cD', '<Cmd>lua create_cpp_declaration()<CR>', { noremap = true, silent = true })
 EOF
 
+function! CopySnippetInfo()
+    let l:file = expand('%')
+    let l:startline = line("'<")
+    let l:endline = line("'>")
+    let l:lines = getline(l:startline, l:endline)
+    let l:snippet = join(l:lines, "\n")
+    let l:formatted = printf("File: %s\nLines: %d-%d\n\n%s", l:file, l:startline, l:endline, l:snippet)
+    call setreg('+', l:formatted)
+    echo "Snippet copied to clipboard"
+endfunction
+
+vnoremap cs :<C-U>call CopySnippetInfo()<CR>
 
 """"""""""""""""""""" END OF CUSTOM ACTION FUNCTIONS """""""""""""""""""""""
 
@@ -453,9 +469,8 @@ cmp.setup({
       end,
     },
     mapping = {
-      ['<C-space>'] = cmp.mapping.complete(),
-      ['<Tab>'] = cmp.mapping.select_next_item(), -- Select next item
-      ['<S-Tab>'] = cmp.mapping.select_prev_item(), -- Select previous item
+      ['<C-j>'] = cmp.mapping.select_next_item(), -- Select next item
+      ['<C-k>'] = cmp.mapping.select_prev_item(), -- Select previous item
       ['<C-y>'] = cmp.mapping.confirm({ select = true }),
     },
     sources = {
