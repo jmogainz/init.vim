@@ -47,12 +47,17 @@ Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'nvim-treesitter/nvim-treesitter-refactor'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install && yarn add tslib' }
+
 Plug 'tpope/vim-abolish'
 
 call plug#end()
 
-" Copilot configuration
-let g:copilot_enabled = 1
+" Markdown Preview "
+nmap <Leader>mp :MarkdownPreview<CR>
+
+" Copilot configuration "
+let g:copilot_enabled = 0
 let g:copilot_no_tab_map = v:true
 imap <silent><script><expr> <C-l> copilot#Accept("\<CR>")
 let g:copilot_assume_mapped = v:true
@@ -234,57 +239,56 @@ _G.create_cpp_definition = function()
 
     -- Find the corresponding .cpp file
     local header_file = vim.api.nvim_buf_get_name(bufnr)
-    local cpp_file = header_file:gsub("%.h$", ".cpp"):gsub("%.hpp$", ".cpp")
+    local Path = require('plenary.path')
+    local scan = require('plenary.scandir')
     
+    local function find_source_file(project_root, source_base_name)
+        local found_files = {}
+        scan.scan_dir(project_root, {
+            depth = 10,
+            search_pattern = source_base_name,
+            on_insert = function(entry)
+                table.insert(found_files, entry)
+            end,
+        })
+        return found_files
+    end
+
     -- Function to create search paths
     local function create_search_paths(header_file)
         local base_name = header_file:match("([^/]+)$")
-        local cpp_base_name = base_name:gsub("%.h$", ".cpp"):gsub("%.hpp$", ".cpp")
+        local source_base_name = base_name:gsub("%.h$", ".cpp"):gsub("%.hpp$", ".cpp")
         local dir_name = header_file:match("(.*/)")
-        local search_paths = { dir_name .. cpp_base_name }
 
-        if dir_name:find("include/") then
-            local src_dir = dir_name:gsub("/include/.*", "/src/")
-            local source_dir = dir_name:gsub("/include/.*", "/source/")
-            table.insert(search_paths, src_dir .. cpp_base_name)
-            table.insert(search_paths, source_dir .. cpp_base_name)
+        -- Assume the project root is a few levels up from the source file directory
+        local project_root = Path:new(dir_name):parent():parent():parent().filename
+        local found_files = find_source_file(project_root, source_base_name)
 
-            local include_parts = dir_name:match("/include/(.+)/")
-            if include_parts then
-                table.insert(search_paths, src_dir .. include_parts .. "/" .. cpp_base_name)
-                table.insert(search_paths, source_dir .. include_parts .. "/" .. cpp_base_name)
-            end
-        end
-        
-        -- Also check directly in src/ and source/ without subdirectories
-        table.insert(search_paths, "src/" .. cpp_base_name)
-        table.insert(search_paths, "source/" .. cpp_base_name)
-        
         -- Convert all paths to absolute paths
-        for i, path in ipairs(search_paths) do
-            search_paths[i] = vim.fn.fnamemodify(path, ":p")
+        for i, path in ipairs(found_files) do
+            found_files[i] = vim.fn.fnamemodify(path, ":p")
         end
-        
-        return search_paths
+
+        return found_files
     end
-    
+
     local search_paths = create_search_paths(header_file)
-    local found_cpp_file = nil
+    local found_source_file = nil
     for _, path in ipairs(search_paths) do
         if vim.fn.filereadable(path) == 1 then
-            found_cpp_file = path
+            found_source_file = path
             break
         end
     end
-    
-    if not found_cpp_file then
-        -- Default to the same directory as header if no file is found
-        found_cpp_file = vim.fn.fnamemodify(cpp_file, ":p")
+
+    if not found_source_file then
+        vim.notify("No corresponding source file found", vim.log.levels.ERROR)
+        return
     end
-    
+
     -- Write the function definition to the .cpp file
     local append_to_cpp = function()
-        local cpp_bufnr = vim.fn.bufnr(found_cpp_file, true)
+        local cpp_bufnr = vim.fn.bufnr(found_source_file, true)
         if cpp_bufnr == -1 then
             vim.notify("Could not open corresponding .cpp file", vim.log.levels.ERROR)
             return
@@ -305,7 +309,7 @@ _G.create_cpp_definition = function()
     end
 
     -- Switch to the .cpp file buffer and append the function definition
-    vim.cmd("edit " .. found_cpp_file)
+    vim.cmd("edit " .. found_source_file)
     append_to_cpp()
 end
 
