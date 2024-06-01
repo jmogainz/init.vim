@@ -1,24 +1,16 @@
 call plug#begin('~/.local/share/nvim/plugged')
-
 Plug 'github/copilot.vim'
 Plug 'nvim-lua/plenary.nvim'
-
 Plug 'farmergreg/vim-lastplace'
-
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-
 Plug 'windwp/nvim-autopairs'
-
 Plug 'sheerun/vim-polyglot'
 Plug 'dracula/vim', {'as': 'dracula'}
-
 Plug 'nvim-tree/nvim-web-devicons'
-
 Plug 'preservim/nerdtree'
 Plug 'ryanoasis/vim-devicons'
 Plug 'Xuyuanp/nerdtree-git-plugin'
-
 Plug 'dense-analysis/ale'
 Plug 'neovim/nvim-lspconfig'
 Plug 'williamboman/nvim-lsp-installer'
@@ -33,23 +25,18 @@ Plug 'L3MON4D3/LuaSnip'
 Plug 'easymotion/vim-easymotion'
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
-
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-surround'
-
 Plug 'sindrets/diffview.nvim'
 Plug 'airblade/vim-gitgutter'
 Plug 'tpope/vim-fugitive'
-
 Plug 'Pocco81/auto-save.nvim'
-
 Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 Plug 'nvim-treesitter/nvim-treesitter-refactor'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install && yarn add tslib' }
-
 Plug 'tpope/vim-abolish'
+Plug 'j-hui/fidget.nvim'
 
 call plug#end()
 
@@ -57,7 +44,7 @@ call plug#end()
 nmap <Leader>mp :MarkdownPreview<CR>
 
 " Copilot configuration "
-let g:copilot_enabled = 0
+let g:copilot_enabled = 1
 let g:copilot_no_tab_map = v:true
 imap <silent><script><expr> <C-l> copilot#Accept("\<CR>")
 let g:copilot_assume_mapped = v:true
@@ -69,11 +56,14 @@ set background=dark
 colorscheme dracula
 
 " Customizing the fzf window size and enabling text wrapping "
-let g:fzf_layout = { 'window': { 'width': 0.95, 'height': 0.95, 'wrap': v:true } }
+let g:fzf_layout = { 'window': { 'width': 1.00, 'height': 1.00, 'wrap': v:true } }
 let $FZF_DEFAULT_COMMAND = 'rg --files --hidden --glob "!.git/*"'
 command! -bang -nargs=* Rg call fzf#vim#grep(
       \ 'rg --column --line-number --no-heading --color=always ' . <q-args>, 1,
       \ fzf#vim#with_preview(), <bang>0)
+" Set the FZF default options
+let $FZF_DEFAULT_OPTS = '--bind=ctrl-j:down,ctrl-k:up' "Option to show the right side of the fzf results: --keep-right"
+let $FZF_DEFAULT_OPTS .= ' --bind=?:toggle-preview --preview "echo {}"'
 
 " FZF "
 nmap <C-e> :Files<CR>
@@ -112,17 +102,25 @@ lua << EOF
 require'nvim-treesitter.configs'.setup {
   ensure_installed = {
   	"json",
-	"cpp",
 	"yaml",
 	"make",
 	"bash",
 	"lua",
 	"html",
-	"python",
 	"gitignore",
 	"dockerfile",
-	"markdown"
+	"markdown",
+    "vim",
+    "cmake"
   },
+  highlight = {
+    enable = true,
+    additional_vim_regex_highlighting = false
+  },
+  indent = {
+    enable = true,
+  },
+  auto_install = true,
   textobjects = {
     select = {
       enable = true,
@@ -135,6 +133,10 @@ require'nvim-treesitter.configs'.setup {
     },
   },
 }
+EOF
+
+lua << EOF
+require('fidget').setup{}
 EOF
 
 lua << EOF
@@ -161,6 +163,7 @@ require('lspconfig').clangd.setup{
         buf_set_keymap('n', 'gs', '<Cmd>ClangdSwitchSourceHeader<CR>', opts)
         buf_set_keymap('n', 'K', '<Cmd>lua vim.lsp.buf.hover()<CR>', opts)
         buf_set_keymap('n', '<Leader>rn', '<Cmd>lua vim.lsp.buf.rename()<CR>', opts)
+        buf_set_keymap('n', '<Leader>f', '<Cmd>lua vim.lsp.buf.format({ async = true })<CR>', opts)
     end
 }
 
@@ -520,7 +523,6 @@ set clipboard=unnamedplus
 set tabstop=4
 set shiftwidth=4
 set expandtab
-set smartindent
 set autoindent
 set incsearch
 set hlsearch
